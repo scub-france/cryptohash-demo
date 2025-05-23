@@ -9,11 +9,13 @@ const state = {
     aliceEncryptedMessage: null,
     bobEncryptedMessage: null,
     serverConnected: false,
-    timelineItems: 0
+    timelineItems: 0,
+    totalExpectedSteps: 0,
+    currentScenario: null
 };
 
 // API Configuration
-const API_URL = 'http://localhost:5000';
+const API_URL = 'http://localhost:5000/';
 
 // Timeline Icons
 const timelineIcons = {
@@ -38,6 +40,28 @@ const timelineIcons = {
         <circle cx="12" cy="16" r="1" fill="currentColor"/>
         <path d="M17 8V7a5 5 0 0 0-10 0v1" stroke-width="2" stroke-dasharray="2 2"/>
     </svg>`
+};
+
+// Timeline Scenarios
+const timelineScenarios = {
+    'alice-to-bob': {
+        totalSteps: 4,
+        steps: [
+            { type: 'keyRetrieval', actor: 'alice' },
+            { type: 'encryption', actor: 'system' },
+            { type: 'transmission', actor: 'alice-to-bob' },
+            { type: 'decryption', actor: 'bob-success' }
+        ]
+    },
+    'bob-to-alice': {
+        totalSteps: 4,
+        steps: [
+            { type: 'keyRetrieval', actor: 'bob' },
+            { type: 'encryption', actor: 'system' },
+            { type: 'transmission', actor: 'bob-to-alice' },
+            { type: 'decryption', actor: 'alice-success' }
+        ]
+    }
 };
 
 // ===========================
@@ -153,27 +177,65 @@ function activatePersonCard(person) {
 }
 
 // ===========================
-// Enhanced Timeline Functions
+// Dynamic Timeline Functions
 // ===========================
 
-function showFlowTimeline() {
+function initializeTimeline(scenarioType) {
     const timeline = document.getElementById('flow-timeline');
     timeline.style.display = 'block';
 
+    // Set current scenario
+    state.currentScenario = scenarioType;
+    state.totalExpectedSteps = timelineScenarios[scenarioType].totalSteps;
+
     // Reset timeline
     state.timelineItems = 0;
-    document.getElementById('timeline-content').innerHTML = '';
+    const timelineContent = document.getElementById('timeline-content');
+    timelineContent.innerHTML = '';
 
     // Reset progress bar
     const progress = document.getElementById('timeline-progress');
+    progress.style.height = '0%';
     progress.style.transform = 'scaleY(0)';
+
+    // Remove any existing dynamic styles
+    removeDynamicTimelineStyles();
 }
 
 function updateTimelineProgress() {
     const progress = document.getElementById('timeline-progress');
-    const percentage = (state.timelineItems / 4) * 100; // Assuming 4 total steps
+    const percentage = state.totalExpectedSteps > 0 ?
+        (state.timelineItems / state.totalExpectedSteps) * 100 : 0;
+
+    // Smooth progress update
     progress.style.height = `${percentage}%`;
     progress.style.transform = 'scaleY(1)';
+    progress.style.transition = 'height 0.5s ease-out';
+}
+
+function addDynamicTimelineStyles() {
+    // Remove existing dynamic styles first
+    removeDynamicTimelineStyles();
+
+    // Create dynamic CSS for animation delays
+    const style = document.createElement('style');
+    style.id = 'dynamic-timeline-styles';
+
+    let css = '';
+    for (let i = 1; i <= state.totalExpectedSteps + 2; i++) { // +2 for buffer
+        const delay = i * 0.1;
+        css += `.timeline-item:nth-child(${i}) { animation-delay: ${delay}s; }\n`;
+    }
+
+    style.textContent = css;
+    document.head.appendChild(style);
+}
+
+function removeDynamicTimelineStyles() {
+    const existingStyle = document.getElementById('dynamic-timeline-styles');
+    if (existingStyle) {
+        existingStyle.remove();
+    }
 }
 
 function addTimelineItem(title, description, actor = 'system', codePreview = '', icon = 'encryption') {
@@ -225,6 +287,12 @@ function addTimelineItem(title, description, actor = 'system', codePreview = '',
 
     // Update progress
     state.timelineItems++;
+
+    // Add dynamic styles if this is the first item
+    if (state.timelineItems === 1) {
+        addDynamicTimelineStyles();
+    }
+
     updateTimelineProgress();
 }
 
@@ -246,7 +314,7 @@ async function sendFromAlice() {
     }
 
     activatePersonCard('alice');
-    showFlowTimeline();
+    initializeTimeline('alice-to-bob');
 
     try {
         // Step 1: Add timeline event for key retrieval
@@ -323,7 +391,7 @@ async function sendFromBob() {
     }
 
     activatePersonCard('bob');
-    showFlowTimeline();
+    initializeTimeline('bob-to-alice');
 
     try {
         // Step 1: Add timeline event
