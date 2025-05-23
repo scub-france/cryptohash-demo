@@ -8,11 +8,37 @@ const state = {
     bobPublicKey: null,
     aliceEncryptedMessage: null,
     bobEncryptedMessage: null,
-    serverConnected: false
+    serverConnected: false,
+    timelineItems: 0
 };
 
 // API Configuration
 const API_URL = 'http://localhost:5000';
+
+// Timeline Icons
+const timelineIcons = {
+    keyRetrieval: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke-width="2"/>
+        <polyline points="10 17 15 12 10 7" stroke-width="2"/>
+        <line x1="15" y1="12" x2="3" y2="12" stroke-width="2"/>
+    </svg>`,
+    encryption: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="5" y="11" width="14" height="10" rx="2" stroke-width="2"/>
+        <path d="M12 3v7" stroke-width="2"/>
+        <circle cx="12" cy="16" r="1" fill="currentColor"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"/>
+    </svg>`,
+    transmission: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M22 2L11 13" stroke-width="2"/>
+        <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke-width="2"/>
+    </svg>`,
+    decryption: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="5" y="11" width="14" height="10" rx="2" stroke-width="2"/>
+        <path d="M12 3v7" stroke-width="2"/>
+        <circle cx="12" cy="16" r="1" fill="currentColor"/>
+        <path d="M17 8V7a5 5 0 0 0-10 0v1" stroke-width="2" stroke-dasharray="2 2"/>
+    </svg>`
+};
 
 // ===========================
 // Initialization
@@ -127,6 +153,82 @@ function activatePersonCard(person) {
 }
 
 // ===========================
+// Enhanced Timeline Functions
+// ===========================
+
+function showFlowTimeline() {
+    const timeline = document.getElementById('flow-timeline');
+    timeline.style.display = 'block';
+
+    // Reset timeline
+    state.timelineItems = 0;
+    document.getElementById('timeline-content').innerHTML = '';
+
+    // Reset progress bar
+    const progress = document.getElementById('timeline-progress');
+    progress.style.transform = 'scaleY(0)';
+}
+
+function updateTimelineProgress() {
+    const progress = document.getElementById('timeline-progress');
+    const percentage = (state.timelineItems / 4) * 100; // Assuming 4 total steps
+    progress.style.height = `${percentage}%`;
+    progress.style.transform = 'scaleY(1)';
+}
+
+function addTimelineItem(title, description, actor = 'system', codePreview = '', icon = 'encryption') {
+    const timeline = document.getElementById('timeline-content');
+    const item = document.createElement('div');
+    item.className = `timeline-item ${actor}`;
+
+    const time = new Date().toLocaleTimeString('fr-FR');
+
+    // Map actors to display names
+    const actorNames = {
+        'alice': 'Alice',
+        'bob': 'Bob',
+        'system': 'Système',
+        'alice-to-bob': 'Alice → Bob',
+        'bob-to-alice': 'Bob → Alice'
+    };
+
+    // Map icons
+    const iconMap = {
+        'keyRetrieval': timelineIcons.keyRetrieval,
+        'encryption': timelineIcons.encryption,
+        'transmission': timelineIcons.transmission,
+        'decryption': timelineIcons.decryption
+    };
+
+    // Determine if this is a success state
+    const isSuccess = actor.includes('success');
+    const baseActor = actor.replace('-success', '');
+
+    item.innerHTML = `
+        <div class="timeline-dot">${iconMap[icon] || iconMap.encryption}</div>
+        <div class="timeline-content">
+            <div class="timeline-header-row">
+                <span class="timeline-time">${time}</span>
+                <span class="timeline-actor">${actorNames[baseActor] || 'Système'}</span>
+            </div>
+            <div class="timeline-action">${title}</div>
+            <div class="timeline-description">${description}</div>
+            ${codePreview ? `<div class="timeline-code">${codePreview}</div>` : ''}
+            <div class="timeline-status">
+                <span class="status-indicator"></span>
+                <span>${isSuccess ? 'Communication sécurisée complétée' : 'Étape complétée'}</span>
+            </div>
+        </div>
+    `;
+
+    timeline.appendChild(item);
+
+    // Update progress
+    state.timelineItems++;
+    updateTimelineProgress();
+}
+
+// ===========================
 // Message Sending Functions
 // ===========================
 
@@ -147,10 +249,13 @@ async function sendFromAlice() {
     showFlowTimeline();
 
     try {
-        // Step 1: Add timeline event
+        // Step 1: Add timeline event for key retrieval
         addTimelineItem(
-            'Récupération de la clé publique de Bob',
-            'Alice obtient la clé publique de Bob pour chiffrer le message'
+            'Récupération de la clé publique',
+            'Alice obtient la clé publique de Bob depuis le serveur de clés pour pouvoir chiffrer son message',
+            'alice',
+            '🔑 Clé publique de Bob: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg...',
+            'keyRetrieval'
         );
 
         await delay(1000);
@@ -158,7 +263,10 @@ async function sendFromAlice() {
         // Step 2: Encrypt message
         addTimelineItem(
             'Chiffrement du message',
-            'Le message est chiffré avec la clé publique de Bob (RSA-2048 OAEP)'
+            'Le message est chiffré avec l\'algorithme RSA-2048 OAEP en utilisant la clé publique de Bob',
+            'system',
+            `📝 Message original: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`,
+            'encryption'
         );
 
         const encryptResponse = await fetch(`${API_URL}/encrypt`, {
@@ -179,7 +287,10 @@ async function sendFromAlice() {
         // Step 3: Send encrypted message
         addTimelineItem(
             'Transmission sécurisée',
-            'Le message chiffré est envoyé à Bob via le canal sécurisé'
+            'Le message chiffré est transmis à Bob via le canal de communication. Même si intercepté, il reste illisible sans la clé privée',
+            'alice-to-bob',
+            `🔐 Message chiffré: ${state.bobEncryptedMessage.substring(0, 50)}...`,
+            'transmission'
         );
 
         // Update Bob's UI
@@ -217,8 +328,11 @@ async function sendFromBob() {
     try {
         // Step 1: Add timeline event
         addTimelineItem(
-            'Récupération de la clé publique d\'Alice',
-            'Bob obtient la clé publique d\'Alice pour chiffrer le message'
+            'Récupération de la clé publique',
+            'Bob obtient la clé publique d\'Alice depuis le serveur de clés pour pouvoir chiffrer son message',
+            'bob',
+            '🔑 Clé publique d\'Alice: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg...',
+            'keyRetrieval'
         );
 
         await delay(1000);
@@ -226,7 +340,10 @@ async function sendFromBob() {
         // Step 2: Encrypt message
         addTimelineItem(
             'Chiffrement du message',
-            'Le message est chiffré avec la clé publique d\'Alice (RSA-2048 OAEP)'
+            'Le message est chiffré avec l\'algorithme RSA-2048 OAEP en utilisant la clé publique d\'Alice',
+            'system',
+            `📝 Message original: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`,
+            'encryption'
         );
 
         const encryptResponse = await fetch(`${API_URL}/encrypt`, {
@@ -247,7 +364,10 @@ async function sendFromBob() {
         // Step 3: Send encrypted message
         addTimelineItem(
             'Transmission sécurisée',
-            'Le message chiffré est envoyé à Alice via le canal sécurisé'
+            'Le message chiffré est transmis à Alice via le canal de communication. Même si intercepté, il reste illisible sans la clé privée',
+            'bob-to-alice',
+            `🔐 Message chiffré: ${state.aliceEncryptedMessage.substring(0, 50)}...`,
+            'transmission'
         );
 
         // Update Alice's UI
@@ -277,11 +397,6 @@ async function aliceDecrypt() {
     }
 
     try {
-        addTimelineItem(
-            'Déchiffrement par Alice',
-            'Alice utilise sa clé privée pour déchiffrer le message'
-        );
-
         const decryptResponse = await fetch(`${API_URL}/decrypt`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -293,6 +408,15 @@ async function aliceDecrypt() {
         }
 
         const decryptData = await decryptResponse.json();
+
+        // Add decryption timeline event
+        addTimelineItem(
+            'Déchiffrement réussi',
+            'Alice utilise sa clé privée pour déchiffrer le message. Seul le détenteur de la clé privée peut lire le contenu',
+            'alice-success',
+            `✅ Message déchiffré: "${decryptData.decrypted}"`,
+            'decryption'
+        );
 
         // Display decrypted message
         const decryptedBox = document.getElementById('alice-decrypted');
@@ -318,11 +442,6 @@ async function bobDecrypt() {
     }
 
     try {
-        addTimelineItem(
-            'Déchiffrement par Bob',
-            'Bob utilise sa clé privée pour déchiffrer le message'
-        );
-
         const decryptResponse = await fetch(`${API_URL}/decrypt`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -334,6 +453,15 @@ async function bobDecrypt() {
         }
 
         const decryptData = await decryptResponse.json();
+
+        // Add decryption timeline event
+        addTimelineItem(
+            'Déchiffrement réussi',
+            'Bob utilise sa clé privée pour déchiffrer le message. Seul le détenteur de la clé privée peut lire le contenu',
+            'bob-success',
+            `✅ Message déchiffré: "${decryptData.decrypted}"`,
+            'decryption'
+        );
 
         // Display decrypted message
         const decryptedBox = document.getElementById('bob-decrypted');
@@ -350,42 +478,6 @@ async function bobDecrypt() {
         console.error('Erreur:', error);
         showToast('Erreur lors du déchiffrement', 'error');
     }
-}
-
-// ===========================
-// Timeline Functions
-// ===========================
-
-function showFlowTimeline() {
-    const timeline = document.getElementById('flow-timeline');
-    timeline.style.display = 'block';
-
-    // Clear previous timeline items
-    document.getElementById('timeline-content').innerHTML = '';
-}
-
-function addTimelineItem(title, description) {
-    const timeline = document.getElementById('timeline-content');
-    const item = document.createElement('div');
-    item.className = 'timeline-item';
-
-    const time = new Date().toLocaleTimeString('fr-FR');
-
-    item.innerHTML = `
-        <div class="timeline-dot"></div>
-        <div class="timeline-content">
-            <div class="timeline-time">${time}</div>
-            <div class="timeline-title">${title}</div>
-            <div class="timeline-description">${description}</div>
-        </div>
-    `;
-
-    timeline.appendChild(item);
-
-    // Animate entry
-    setTimeout(() => {
-        item.style.animationDelay = '0s';
-    }, 100);
 }
 
 // ===========================
