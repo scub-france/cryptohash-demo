@@ -262,8 +262,8 @@
             </div>
         </div>
 
-        <!-- Flow Timeline -->
-        <div class="flow-timeline">
+        <!-- Flow Timeline - Initially Hidden -->
+        <div class="flow-timeline" id="flow-timeline" style="display: none;">
             <div class="timeline-header">
                 <h3 class="timeline-title">Chronologie de l'échange RSA</h3>
                 <p class="timeline-subtitle">Suivez chaque étape du processus de chiffrement asymétrique</p>
@@ -271,125 +271,11 @@
 
             <div class="timeline">
                 <div class="timeline-track"></div>
-                <div class="timeline-progress" style="height: 75%;"></div>
-
-                <!-- Step 1: Key Retrieval -->
-                <div class="timeline-item alice">
-                    <div class="timeline-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke-width="2"/>
-                            <polyline points="10 17 15 12 10 7" stroke-width="2"/>
-                            <line x1="15" y1="12" x2="3" y2="12" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-header-row">
-                            <span class="timeline-time">10:31:39</span>
-                            <span class="timeline-actor">Alice</span>
-                        </div>
-                        <div class="timeline-action">Récupération de la clé publique</div>
-                        <div class="timeline-description">
-                            Alice obtient la clé publique de Bob depuis le serveur de clés pour pouvoir chiffrer son message
-                        </div>
-                        <div class="timeline-code">
-                            🔑 Clé publique de Bob: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg...
-                        </div>
-                        <div class="timeline-status">
-                            <span class="status-indicator"></span>
-                            <span>Clé récupérée avec succès</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Encryption -->
-                <div class="timeline-item system">
-                    <div class="timeline-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect x="5" y="11" width="14" height="10" rx="2" stroke-width="2"/>
-                            <path d="M12 3v7" stroke-width="2"/>
-                            <circle cx="12" cy="16" r="1" fill="currentColor"/>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-header-row">
-                            <span class="timeline-time">10:31:40</span>
-                            <span class="timeline-actor">Système</span>
-                        </div>
-                        <div class="timeline-action">Chiffrement du message</div>
-                        <div class="timeline-description">
-                            Le message est chiffré avec l'algorithme RSA-2048 OAEP en utilisant la clé publique de Bob
-                        </div>
-                        <div class="timeline-code">
-                            📝 Message original: "Bonjour Bob, voici des informations confidentielles."
-                        </div>
-                        <div class="timeline-status">
-                            <span class="status-indicator"></span>
-                            <span>Chiffrement RSA-2048 bits appliqué</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Transmission -->
-                <div class="timeline-item alice">
-                    <div class="timeline-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M22 2L11 13" stroke-width="2"/>
-                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-header-row">
-                            <span class="timeline-time">10:31:41</span>
-                            <span class="timeline-actor">Alice → Bob</span>
-                        </div>
-                        <div class="timeline-action">Transmission sécurisée</div>
-                        <div class="timeline-description">
-                            Le message chiffré est transmis à Bob via le canal de communication. Même si intercepté, il reste illisible sans la clé privée
-                        </div>
-                        <div class="timeline-code">
-                            🔐 Message chiffré: bTK3Hs8vX9Qp2mN4rL6wE1Y5uI0oA3S7dF...
-                        </div>
-                        <div class="timeline-status">
-                            <span class="status-indicator"></span>
-                            <span>Transmission sécurisée réussie</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Decryption -->
-                <div class="timeline-item bob success">
-                    <div class="timeline-dot">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect x="5" y="11" width="14" height="10" rx="2" stroke-width="2"/>
-                            <path d="M12 3v7" stroke-width="2"/>
-                            <circle cx="12" cy="16" r="1" fill="currentColor"/>
-                            <path d="M17 8V7a5 5 0 0 0-10 0v1" stroke-width="2" stroke-dasharray="2 2"/>
-                        </svg>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="timeline-header-row">
-                            <span class="timeline-time">10:31:43</span>
-                            <span class="timeline-actor">Bob</span>
-                        </div>
-                        <div class="timeline-action">Déchiffrement réussi</div>
-                        <div class="timeline-description">
-                            Bob utilise sa clé privée pour déchiffrer le message. Seul le détenteur de la clé privée peut lire le contenu
-                        </div>
-                        <div class="timeline-code">
-                            ✅ Message déchiffré: "Bonjour Bob, voici des informations confidentielles."
-                        </div>
-                        <div class="timeline-status">
-                            <span class="status-indicator"></span>
-                            <span>Communication sécurisée complétée</span>
-                        </div>
-                    </div>
+                <div class="timeline-progress" id="timeline-progress"></div>
+                <div id="timeline-content">
+                    <!-- Timeline items will be dynamically added here -->
                 </div>
             </div>
-
-            <button class="demo-button" onclick="alert('Relancer la démonstration')">
-                Nouvelle démonstration
-            </button>
         </div>
     </section>
 
